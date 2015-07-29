@@ -44,28 +44,28 @@
 	Ajax.prototype = {
 
 		queue: function(data, options, queueName) {
-			var req = _requestFactory(data, options);
-			_getQueue(queueName).push(req);
+			var req = this._requestFactory(data, options);
+			this._getQueue(queueName, true).push(req);
 
 			return req.promise;
 		},
 
-		runQueue: function(queueName) {
-			var q = _getQueue(queueName);
-			var rq = new RequestQueue(q, this.options.concurrency, function(r) {
-				this.recent = r;
+		execQueue: function(queueName) {
+			var q = this._getQueue(queueName);
+			var rq = new StrandLib.RequestQueue(q, this.options.concurrency, function(r) {
+				this.current = r;
 			}.bind(this));
-			rq.run();
+			rq.exec();
 			q.running = rq;
 			return rq.promise;
 		},
 
 		exec: function(data, options) {
 
-			var req = _requestFactory(data, options);
+			var req = this._requestFactory(data, options);
 
 			this.requests.push(req);
-			this.recent = req;
+			this.current = req;
 			req.exec();
 
 			return req.promise;
@@ -80,7 +80,7 @@
 					this[queueName] = [];
 					return this[queueName];
 				}
-			} else if (queueName) {
+			} else {
 				return this.requests;
 			}
 		},
@@ -91,14 +91,14 @@
 
 			options = copy({}, this.options, options);
 
-			var url = this.serializeUrl(options.url, this.urlParams);
-			url = this.serializeParams(url, this.params);
+			var url = this.serializeUrl(options.url, options.urlParams);
+			url = this.serializeParams(url, options.params);
 			data = this.setRequestData(options.method, options.contentType, data, options.body);
 
-			return new StrandLib.Request(StrandLib.DataUtils.copy({
+			return new StrandLib.Request(copy(options, {
 				url:url,
 				body:data,
-			}, options));
+			}));
 		},
 
 		abort: function() {
@@ -120,18 +120,18 @@
 		},
 
 		addHeader: function(name, value) {
-			this.headers = this.headers || [];
-			this.headers.push({name:name, value:value});
+			this.options.headers = this.options.headers || [];
+			this.options.headers.push({name:name, value:value});
 		},
 
 		addParam: function(name, value) {
-			this.params = this.params || [];
-			this.params.push({name:name, value:value});
+			this.options.params = this.params || [];
+			this.options.params.push({name:name, value:value});
 		},
 
 		addUrlParam: function(param) {
-			this.urlParams = this.urlParams || [];
-			this.urlParams.push(param);
+			this.options.urlParams = this.urlParams || [];
+			this.options.urlParams.push(param);
 		},
 
 		setRequestData: function(method, contentType, override, body) {
@@ -228,7 +228,7 @@
 		},
 
 		get state() {
-			return this.current && this.current.readyState;
+			return this.current && this.current.state;
 		},
 
 		get xhr() {

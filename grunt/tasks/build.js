@@ -276,6 +276,7 @@ module.exports = function(grunt) {
 			'copy:build',
 			'sass:dist',
 			'cssUrlEmbed', 
+			// 'hogan_static:lib', //un-comment to build entire library
 			'vulcanize:dist',
 			'htmlmin:dist',
 			'usebanner:dist'
@@ -287,8 +288,8 @@ module.exports = function(grunt) {
 			'clean:build',
 			'copy:build',
 			'sass:dev',
-			'hogan_static:index',
-			'hogan_static:lib'
+			'hogan_static:index'
+			// 'hogan_static:lib'
 		]);
 	});
 

@@ -17,7 +17,10 @@
     "build": "gulp",
     "start": "gulp live",
     "dist": "gulp build:dist",
-    "release": "gulp release:patch"
+    "release": "gulp release:patch",
+    "mm2strand": "(cd srcOriginal || cp -r src srcOriginal) && npm install replace renamer && replace 'mm-' 'strand-' gulp src -r && renamer --find 'mm-' --replace 'strand-' src/**/* src/**",
+    "noconflict": "npm install replace && replace 'polymer/polymer.html' 'polymerLegacy/polymer.html' src -r && grunt clean build:dist copy:dist",
+    "bower": "bower"
   },
   "devDependencies": {
     "autoprefixer": "^6.1.2",

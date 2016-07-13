@@ -16,6 +16,7 @@
 <link rel="import" href="../shared/behaviors/poolusable.html"/>
 <link rel="import" href="../strand-template-finder/strand-template-finder.html"/>
 <link rel="import" href="../shared/behaviors/refable.html"/>
+<link rel="import" href="../shared/js/measure.html"/>
 
 <dom-module id="strand-item-recycler">
 	<link rel="import" type="css" href="strand-item-recycler.css"/>
@@ -28,13 +29,14 @@
 			<div id="quad"></div>
 			<div id="constrainer">
 				<div id="middle"></div>
-				<div id="header">
-					<content select=":not([recycler=footer])"></content>
-				</div>
-				<div id="footer">
-					<content select="[recycler=footer]"></content>
-				</div>
 			</div>
+			<div id="header">
+				<content select=":not([recycler=footer])"></content>
+			</div>
+			<div id="footer">
+				<content select="[recycler=footer]"></content>
+			</div>
+			<div id="extent" style$="{{_extentStyle(_middleWidth, _headerWidth, _footerWidth)}}"></div>
 		</div>
 	</template>
 </dom-module>

@@ -19,8 +19,8 @@
 #pane {
 	width: 100%;
 	height: 100%;
-	overflow-x: inherit;
 	overflow-y: inherit;
+	overflow-x: inherit;
 	max-height: inherit;
 }
 
@@ -32,13 +32,25 @@
 	position: absolute;
 	display: block;
 	overflow: hidden;
+	pointer-events: none;
 }
 
 #constrainer {
-	display: inline-block;
+	overflow-x: hidden;
+	overflow-y: inherit;
 }
 
-#header, #footer, #middle, #constrainer {
+#extent {
+	height: 1px;
+	margin-top: -1px;
+	z-index: -1;
+}
+
+#footer {
+	bottom: 0;
+}
+
+#header, #footer, #middle, #extent, #constrainer {
 	min-width: 100%;
 	position: relative;
 }

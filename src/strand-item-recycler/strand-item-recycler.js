@@ -18,9 +18,15 @@ found here: https://github.com/Polymer/core-list
 
 
 
-(function (scope) {
+(function (scope) { // TODO: explore #header #footer #constrainer/#middle position:absolute
 
 	window.addEventListener("mousewheel", Function());
+
+	var _scrollbarWidth = 0;
+
+	function _getScrollbarWidth () {
+		return _scrollbarWidth || (_scrollbarWidth = StrandLib.Measure.getScrollbarWidth());
+	}
 
 	function _identity (value) {
 		return value;
@@ -108,10 +114,12 @@ found here: https://github.com/Polymer/core-list
 	BoundValue.prototype = Object.create(null);
 
 	function ResponderStore (itemRecycler) {
-		this.scroll = null;
+		this.vscroll = null;
+		this.hscroll = null;
 		this.pane = null;
 		this.header = null;
 		this.footer = null;
+		this.middle = null;
 	}
 
 
@@ -119,6 +127,11 @@ found here: https://github.com/Polymer/core-list
 	function elementHeight (element) {
 		return element.getBoundingClientRect().height; // Firefox uses doubles
 		// return element.offsetHeight; // only provides integers
+	}
+
+	function elementWidth (element) {
+		return element.getBoundingClientRect().width; // Firefox uses doubles
+		// return element.offsetWidth; // only provides integers
 	}
 
 	function roundMaybe (value) {
@@ -152,6 +165,11 @@ found here: https://github.com/Polymer/core-list
 				type: String,
 				value: "all",
 				reflectToAttribute: true,
+			},
+			vScrollbarWidth: {
+				type: Number,
+				notify: true,
+				readOnly: true,
 			},
 			scope: {
 				type: Object,
@@ -191,6 +209,15 @@ found here: https://github.com/Polymer/core-list
 				type: Number,
 				value: 0,
 			},
+			_headerWidth: {
+				type: Number,
+			},
+			_footerWidth: {
+				type: Number,
+			},
+			_middleWidth: {
+				type: Number,
+			},
 			_headerHeight: {
 				type: Number,
 				value: 0,
@@ -219,10 +246,12 @@ found here: https://github.com/Polymer/core-list
 				type: Object,
 				value: function () {
 					var responders = new ResponderStore(this);
-					responders.scroll = this._scrollHandler.bind(this);
+					responders.vscroll = this._vscrollHandler.bind(this);
+					responders.hscroll = this._hscrollHandler.bind(this);
 					responders.pane = this._paneResponse.bind(this);
 					responders.header = this._headerResponse.bind(this);
 					responders.footer = this._footerResponse.bind(this);
+					responders.middle = this._middleResponse.bind(this);
 					return responders;
 				},
 			},
@@ -425,18 +454,43 @@ found here: https://github.com/Polymer/core-list
 			}
 		},
 
+		_vscrollable: function () {
+			return this.$.constrainer;
+		},
+
+		_hscrollable: function () {
+			return this.$.pane;
+		},
+
 		attached: function () {
-			this.$.pane.addEventListener("scroll", this._responders.scroll, true);
+			var vscrollable = this._vscrollable();
+			var hscrollable = this._hscrollable();
+			vscrollable.addEventListener("scroll", this._responders.vscroll, true);
+			hscrollable.addEventListener("scroll", this._responders.hscroll, true);
 			this.addResizeListener(this._responders.pane, this.$.pane);
 			this.addResizeListener(this._responders.header, this.$.header);
 			this.addResizeListener(this._responders.footer, this.$.footer);
+			this.addResizeListener(this._responders.middle, this.$.middle);
+			this.addResizeListener(this._responders.pane, this.$.quad);
 		},
 
 		detached: function () {
-			this.$.pane.removeEventListener("scroll", this._responders.scroll);
+			var vscrollable = this._vscrollable();
+			var hscrollable = this._hscrollable();
+			vscrollable.removeEventListener("scroll", this._responders.vscroll);
+			hscrollable.removeEventListener("scroll", this._responders.hscroll);
 			this.removeResizeListener(this._responders.pane, this.$.pane);
 			this.removeResizeListener(this._responders.header, this.$.header);
 			this.removeResizeListener(this._responders.footer, this.$.footer);
+			this.removeResizeListener(this._responders.middle, this.$.middle);
+			this.removeResizeListener(this._responders.pane, this.$.quad);
+		},
+
+		_extentStyle: function (_middleWidth, _headerWidth, _footerWidth) {
+			var width = Math.max(+_middleWidth || 0, +_headerWidth || 0, +_footerWidth || 0);
+			var highDPIFactor = 2;
+			width = Math.round(width * highDPIFactor) / highDPIFactor; // high-dpi(?) correction
+			return "width: "+width+"px";
 		},
 
 		_settleDown: function () {
@@ -449,13 +503,17 @@ found here: https://github.com/Polymer/core-list
 
 			delta -= (this._headerHeight + this._footerHeight);
 
+			itemRecycler._normalizeWidths();
+
 			if (delta) {
 				itemRecycler._viewportHeight += delta;
 
 				if (itemRecycler._initialized) {
 					itemRecycler._recycler.resizeFrame(itemRecycler._viewportHeight);
 				}
+				itemRecycler._repositionHeader();
 				itemRecycler._repositionFooter();
+				itemRecycler._resizeConstrainer();
 				itemRecycler.debounce("settle-down", itemRecycler._settleDown, 1);
 			}
 		},
@@ -463,6 +521,8 @@ found here: https://github.com/Polymer/core-list
 		_headerResponse: function (e) {
 			var itemRecycler = this;
 			var delta = +(elementHeight(itemRecycler.$.header) - itemRecycler._headerHeight) || 0;
+
+			itemRecycler._normalizeWidths();
 
 			if (delta) {
 				itemRecycler._headerHeight += delta;
@@ -472,7 +532,10 @@ found here: https://github.com/Polymer/core-list
 					itemRecycler._recycler.resizeFrame(itemRecycler._viewportHeight);
 				}
 				itemRecycler._repositionMiddle();
+				itemRecycler._repositionHeader();
 				itemRecycler._repositionFooter();
+				itemRecycler._repositionConstrainer();
+				itemRecycler._resizeConstrainer();
 				itemRecycler.debounce("settle-down", itemRecycler._settleDown, 1);
 			}
 		},
@@ -480,6 +543,8 @@ found here: https://github.com/Polymer/core-list
 		_footerResponse: function (e) {
 			var itemRecycler = this;
 			var delta = +(elementHeight(itemRecycler.$.footer) - itemRecycler._footerHeight) || 0;
+
+			itemRecycler._normalizeWidths();
 
 			if (delta) {
 				itemRecycler._footerHeight += delta;
@@ -489,7 +554,72 @@ found here: https://github.com/Polymer/core-list
 					itemRecycler._recycler.resizeFrame(itemRecycler._viewportHeight);
 				}
 				itemRecycler._repositionFooter();
+				itemRecycler._resizeConstrainer();
 				itemRecycler.debounce("settle-down", itemRecycler._settleDown, 1);
+			}
+		},
+
+		_middleResponse: function (e) {
+			var itemRecycler = this;
+			itemRecycler._normalizeWidths();
+		},
+
+		_repeatResponse: function () {
+			var itemRecycler = this;
+			itemRecycler._headerResponse();
+			itemRecycler._footerResponse();
+			itemRecycler._middleResponse();
+			itemRecycler._paneResponse();
+		},
+
+		validateWidths: function () {
+			this._normalizeWidths();
+		},
+
+		_normalizeWidths: function () {
+			var renormalize = 0|false;
+			var width = 0;
+			var delta = 0;
+
+			width = +elementWidth(this.$.header) || 0;
+			if (this._headerWidth !== width) {
+				this._headerWidth = width;
+				renormalize = 0|true;
+			}
+
+			width = +elementWidth(this.$.footer) || 0;
+			if (this._footerWidth !== width) {
+				this._footerWidth = width;
+				renormalize = 0|true;
+			}
+
+			width = +this._normalizeViewportWidth(this.$.middle) || 0;
+			if (this._middleWidth !== width) {
+				if (width < this._middleWidth) {
+					delta = this.$.constrainer.offsetLeft + this.$.constrainer.offsetWidth;
+					delta = this.$.middle.scrollWidth + (+this.vScrollbarWidth || 0) - delta;
+					if (delta < 0) {
+						this._scrollHorizontallyTo(this.$.constrainer.offsetLeft + delta);
+					}
+				}
+				this._middleWidth = width;
+				renormalize = 0|true;
+			}
+
+			if (renormalize) {
+				this.debounce("fix-scrollbars", this._repeatResponse, 100);
+			}
+		},
+
+		_normalizeViewportWidth: function (element) {
+			var scrollWidth = +(element.scrollWidth) || 0;
+			var vscrollable = this._vscrollable();
+			if (vscrollable.scrollHeight > vscrollable.clientHeight) {
+				this._setVScrollbarWidth(_getScrollbarWidth());
+				return _getScrollbarWidth() + scrollWidth;
+			} else {
+				this._setVScrollbarWidth(0);
+				return scrollWidth;
 			}
 		},
 
@@ -583,10 +713,11 @@ found here: https://github.com/Polymer/core-list
 		},
 
 		initializeRecycler: function() {
+			var vscrollable = this._vscrollable();
 			if (this._initializable) {
 				if (this._recycler.truncate(0)) {
 					this._scrollTop = 0;
-					this.$.pane.scrollTop = 0;
+					vscrollable.scrollTop = 0;
 					this._itemHeight = 0;
 				}
 
@@ -623,6 +754,8 @@ found here: https://github.com/Polymer/core-list
 			this._repositionHeader();
 			this._repositionFooter();
 			this._repositionMiddle();
+			this._repositionConstrainer();
+			this._resizeConstrainer();
 
 			var padding = roundMaybe(this._itemHeight);
 
@@ -634,6 +767,7 @@ found here: https://github.com/Polymer/core-list
 		},
 
 		scrollToIndex: function(value, force) {
+			var vscrollable = this._vscrollable();
 			var direction = (+force || 0)
 			var index = 0|(arguments.length ? value : this._desiredIndex);
 			var count = 0|(this.data && this.data.length);
@@ -649,12 +783,12 @@ found here: https://github.com/Polymer/core-list
 					lower = this._recycler.getElevationAtIndex(index);
 
 					if (direction < 0 || (!direction && this._scrollTop >= lower)) {
-						this.$.pane.scrollTop = lower;
+						vscrollable.scrollTop = lower;
 						change = this._scrollTop - lower;
 					} else {
 						upper = this._recycler.getElevationAtIndex(index + 1);
 						if (direction > 0 || this._scrollTop < upper - this._viewportHeight) {
-							this.$.pane.scrollTop = upper - this._viewportHeight;
+							vscrollable.scrollTop = upper - this._viewportHeight;
 							change = this._scrollTop - (upper - this._viewportHeight);
 						}
 					}
@@ -704,27 +838,45 @@ found here: https://github.com/Polymer/core-list
 		},
 
 		_scrollResponse: function () {
-			var delta = this.$.pane.scrollTop - this._scrollTop;
+			var vscrollable = this._vscrollable();
+			var delta = vscrollable.scrollTop - this._scrollTop;
 			var diff = this._middleHeight - this._viewportHeight;
 
-			this._scrollTop = this.$.pane.scrollTop;
+			this._scrollTop = vscrollable.scrollTop;
 
 			if (diff < this._scrollTop &&
 				diff > 0) {
 				delta -= this._scrollTop - diff;
 				this._scrollTop = diff;
 				this.scrollBy(delta);
-				this.$.pane.scrollTop = this._scrollTop;
+				vscrollable.scrollTop = this._scrollTop;
 			} else {
 				this.scrollBy(delta);
 			}
 		},
 
-		_scrollHandler: function(e) {
-			if (e.target === this.$.pane) {
+		_vscrollHandler: function(e) {
+			var vscrollable = this._vscrollable();
+			if (e.target === vscrollable) {
 				e.stopImmediatePropagation();
 				this.debounce("work", this._scrollResponse);
 			}
+		},
+
+		_hscrollHandler: function(e) {
+			var hscrollable = this._hscrollable();
+			if (e.target === hscrollable) {
+				e.stopImmediatePropagation();
+				this._scrollHorizontallyTo(hscrollable.scrollLeft);
+			}
+		},
+
+		_scrollHorizontallyTo: function (left) {
+			var vscrollable = this._vscrollable();
+			var scrollLeft = +left || 0;
+			// TODO: centralize style changes and make sure 3d still works properly
+			this.$.middle.style.left = (-scrollLeft)+"px";
+			vscrollable.style.left = scrollLeft+"px";
 		},
 
 		inferOffviewHeightsAfterNextMutation: function () {
@@ -815,7 +967,7 @@ found here: https://github.com/Polymer/core-list
 					height = recycler.getHeightAtIndex(young);
 					bound.pendingResponse = 0|true;
 					// defer validation of the height
-					this.debounce(young, this._getBoundResponse(bound), 0|!(this._itemHeight > 0));
+					this.debounce(young, this._getBoundResponse(bound), 1);
 				}
 
 				if (this._measurements.isElevationKnown(young)) {
@@ -1107,19 +1259,28 @@ found here: https://github.com/Polymer/core-list
 		},
 
 		_repositionMiddle: function () {
-			var position = (this._headerHeight + this._transformBaseline);
+			var position = (this._transformBaseline);
 			this._setTranslation(position, this.$.middle);
 		},
 
 		_repositionHeader: function () {
-			var position = -(this._middleHeight - this._transformBaseline - this._scrollTop);
-			this._setTranslation(position, this.$.header);
+			var position = -this._viewportHeight;
+			this._setTranslation(position > 0 ? 0 : position, this.$.header);
 		},
 
 		_repositionFooter: function () {
-			var position = -(this._middleHeight - this._transformBaseline - this._scrollTop);
-			position += this._viewportHeight;
-			this._setTranslation(position, this.$.footer);
+			var position = this._viewportHeight;
+			//this._setTranslation(position, this.$.footer);
+		},
+
+		_repositionConstrainer: function () {
+			var position = (this._headerHeight);
+			this._setTranslation(position, this.$.constrainer);
+		},
+
+		_resizeConstrainer: function () {
+			var height = this._viewportHeight;
+			this.$.constrainer.style.height = (height) + "px";
 		},
 
 

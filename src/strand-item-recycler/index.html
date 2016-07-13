@@ -43,53 +43,74 @@
 	</style>
   </head>
   <body>
+
 	<button id="switch">toggle</button>
 	<div id="toggle" style="display: notnone">
-		<strand-item-recycler id="itemRecycler" template-uri="./template.html" unresolved>
-			<div id="header" recycler="header">Header <br/> Text</div>
+		<strand-item-recycler id="itemRecycler" unresolved>
+			<div id="header" recycler="header" style="width: 100%;">Header <br/> Text</div>
 			<div id="footer" recycler="footer">Footer <br/> Text <br/> Too</div>
 			Hello World
-		</strand-item-recycler>
-
-		<strand-item-recycler id="itemRecycler2" unresolved>
-			<div id="header" recycler="header">Header <br/> Text</div>
-			<div id="footer" recycler="footer">Footer <br/> Text <br/> Too</div>
-			Hello World
-			<template>
+			<template preserve-content>
 				<div class="_mm_item" data-id="{{model.id}}" style$="{{model.style}}">
-					<span>{{model.num}}</span><strand-input value="{{model.name}}"></strand-input>
+					<strand-input value="{{model.name}}"></strand-input><span>{{model.num}}</span>
+
+					<strand-dropdown placeholder="Some Very Long Name" data="{{model.dd.dropdownData}}" value="{{model.dd.dropDownValue}}"></strand-dropdown>
+					<strand-item-recycler id="itemRecyclerA" unresolved style="height: 100px; width: 50%; display: inline-block;" data="{{model.nested}}">
+						
+						<template preserve-content>
+							<strand-dropdown data="{{model.deep}}"></strand-dropdown>
+							<div class="_mm_item" data-id="{{model.id}}" style$="{{model.style2}}">
+								<span>{{model.num}}</span><strand-input value="{{model.name}}"></strand-input>
+							</div>
+						</template>
+					</strand-item-recycler>
+
 				</div>
 			</template>
-		</strand-item-recycler>
 
-		<strand-item-recycler id="itemRecycler3" template-uri="./template.html" unresolved>
-			<div id="header" recycler="header">Header <br/> Text</div>
-			<div id="footer" recycler="footer">Footer <br/> Text <br/> Too</div>
-			Hello World
-			<template>
-				<div class="_mm_item" data-id="{{model.id}}" style$="{{model.style}}">
-					<span>{{model.num}}</span><strand-input value="{{model.name}}"></strand-input>
-				</div>
-			</template>
 		</strand-item-recycler>
 	</div>
+
+
+
+		<!--
+		<strand-dropdown placeholder="{{model.name}}" value="{{model.value}}">
+			<strand-list-item value="0">JPEG</strand-list-item>
+			<strand-list-item value="1">GIF</strand-list-item>
+			<strand-list-item value="2">SWF</strand-list-item>
+			<strand-list-item value="3">PNG</strand-list-item>
+		</strand-dropdown>
+		-->
 	<script type="text/javascript">
 		var data = [],
 			ddDataArr = [],
 			itemRecycler,
 			header,
-			NUM_ITEMS = 15;
+			NUM_ITEMS = 150,
+			clone = data;
 
-		for(var i=0; i<NUM_ITEMS; i++) {
-			generateItem(i);
-		}
-
-		for(var j=0; j<50; j++) {
+		for(var j=0; j<10; j++) {
 			ddDataArr.push({
 				name: "Some Name " + j,
 				// value: j
 				value: "String" + j
 			});
+		}
+
+		for(var i=0; i<NUM_ITEMS; i++) {
+			generateItem(i);
+		}
+
+		clone = JSON.parse(JSON.stringify(data));
+
+		for(var i=0; i<NUM_ITEMS; i++) {
+			data[i].nested = JSON.parse(JSON.stringify(clone));
+			data[i].dd.dropdownData = JSON.parse(JSON.stringify(ddDataArr));
+
+
+			data[i].nested.forEach(function (nest) {
+				nest.deep = this;
+			}, data[i].dd.dropdownData);
 		}
 
 		function generateItem(index) {
@@ -103,16 +124,22 @@
 				file: "Creative_File_" + i + ".swf",
 				dimensions: String(Math.floor(Math.random()*300) + " x " + Math.floor(Math.random()*300)),
 				//style: "transition: height 2s; height: 50px",
-				style: index < 12 ? "" : "height: 90px",
+				style: (index < 0 * 12 ? "" : "height: 100px; "),// + "width: 2000px;",
+				style2: (index < 0 * 12 ? "" : "height: 80px; "),// + "width: 2000px;",
 				size: 50,
 				dd:{
-					dropdownData: ddDataArr,
+					dropdownData: null,
 					dropDownValue: "String15"
 				}
 			});
 		}
 
 		window.addEventListener("WebComponentsReady", function() {
+
+
+
+
+			//return;
 			var all = [
 				document.querySelector("#itemRecycler"),
 				document.querySelector("#itemRecycler2"),

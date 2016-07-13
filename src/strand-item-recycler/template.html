@@ -3,6 +3,16 @@
 		<strand-input value="{{model.name}}"></strand-input><span>{{model.num}}</span>
 
 		<strand-dropdown placeholder="Some Very Long Name" data="{{model.dd.dropdownData}}" value="{{model.dd.dropDownValue}}"></strand-dropdown>
+		<strand-item-recycler id="itemRecyclerA" unresolved data="{{model.nested}}" style="width: 50%">
+			<div id="header" recycler="header">Header <br/> Text</div>
+			<div id="footer" recycler="footer">Footer <br/> Text <br/> Too</div>
+			Hello World
+			<template>
+				<div class="_mm_item" data-id="{{model.id}}" style$="{{model.style}}">
+					<span>{{model.num}}</span><strand-input value="{{model.name}}"></strand-input>
+				</div>
+			</template>
+		</strand-item-recycler>
 
 		<!--
 		<strand-dropdown placeholder="{{model.name}}" value="{{model.value}}">

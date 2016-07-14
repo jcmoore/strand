@@ -42,12 +42,16 @@
 			},
 			indicate: {
 				type: String,
-				value: "loading  measuring",
+				value: "loading  measuring  deferring  initializing",
 			},
 			_indications: {
 				type: Object,
 				value: null,
 				computed: "_computeIndications(indicate)",
+			},
+			_loaderStyle: {
+				type: String,
+				computed: "_styleLoader(_indications, isLoading, _measuring, _deferring, _initializing)",
 			},
 			isLoading: {
 				type: Boolean,
@@ -55,6 +59,19 @@
 			},
 			_measuring: {
 				type: Boolean,
+				observer: "_fulfillColumnResizing",
+			},
+			_deferring: {
+				type: Boolean,
+				value: false,
+			},
+			_initializing: {
+				type: Boolean,
+				value: false,
+			},
+			_vScrollbarWidth: {
+				type: Number,
+				observer: "_delayedColumnResizing",
 			},
 			expanded: {
 				type: Boolean,
@@ -120,12 +137,12 @@
 		},
 
 		attached: function() {
+			this._initializing = true;
 			this.async(this._initialize);
 		},
 
 		_initialize: function() {
 			this._initializeColumns();
-			this._setInitialColumnWidth();
 		},
 
 		_initializeColumns: function() {
@@ -147,19 +164,6 @@
 
 		_expandableChanged: function () {
 			this.notifyPath("scope.expandable", this.expandable);
-		},
-
-		_setInitialColumnWidth: function() {
-			var setInitialWidth = this._columns.every(function(column){
-				return column.width === null || column.width === undefined;
-			});
-
-			if(setInitialWidth) {
-				var initialWidth = 100 / this._columns.length;
-				this._columns.forEach(function(column) {
-					column.width = initialWidth + "%";
-				});
-			}
 		},
 
 		////// Selection //////
@@ -205,15 +209,23 @@
 			});
 		},
 
+		_hasColumn: function (column) {
+			return 0|(column && this._columnsMap && this._columnsMap[column.field] === column);
+		},
+
 		////// Resizing //////
 		_onColumnResizeStart: function(e) {
-			this._columnOffset = e.detail.val;
+			if (this._hasColumn(e.target)) {
+				this._columnOffset = e.detail.val;
+			}
 		},
 
 		_onColumnResize: function(e){
-			var x = this._columnOffset + e.detail.val - this.$.viewport.scrollLeft;
-			this.translate3d(x + "px", 0, 0, this.$.separator);
-			this._showSeparator();
+			var x = this._columnOffset + e.detail.val - this.$.viewport.sliderLeft;
+			if (this._hasColumn(e.target)) {
+				this.translate3d(x + "px", 0, 0, this.$.separator);
+				this._showSeparator();
+			}
 		},
 
 		_showSeparator: function() {
@@ -227,21 +239,44 @@
 		},
 
 		_onColumnResizeEnd: function(e) {
-			this._resizeColumns(e.detail.field, e.detail.val);
-			this._hideSeparator();
+			if (this._hasColumn(e.target)) {
+				this._resizeColumns(e.detail.field, e.detail.val);
+				this._hideSeparator();
+			}
+		},
+
+		_delayedColumnResizing: function () {
+			this.async(this._resizeColumns, 1);
+		},
+
+		_fulfillColumnResizing: function () {
+			if (this._deferring) {
+				this._deferring = false;
+				this.async(this._resizeColumns);
+			}
 		},
 
 		_resizeColumns: function(field, val) {
 			var target = this._columnsMap[field];
 			var targetIndex = this._columns.indexOf(target);
 
-			////// Overflow Resizing //////
-			this._columns.forEach(function(column, index) {
-				if(column.width.indexOf("%") !== -1){
-					column.set('width', column.offsetWidth + 'px');
-				}
-				this.notifyPath("scope._columns."+index+".width", column.width);
-			}, this);
+			if (!this._measuring) {
+				////// Overflow Resizing //////
+				this._columns.forEach(function(column, index) {
+					if(column.width.indexOf("%") !== -1){
+						column.set('width', column.offsetWidth + 'px');
+					}
+					this.notifyPath("scope._columns."+index+".width", column.width);
+				}, this);
+
+				this.$.viewport.modifying = false;
+				this._initializing = false;
+				this._deferring = false;
+			} else {
+				this._deferring = true;
+			}
+
+			this.$.viewport.async(this.$.viewport.validateWidths);
 		},
 
 		////// Sorting //////
@@ -295,8 +330,21 @@
 			}, {});
 		},
 
-		_showLoader: function (_indications, isLoading, _measuring) {
-			return (isLoading && _indications.loading) || (_measuring && _indications.measuring);
+		_styleLoader: function (_indications, isLoading, _measuring, _deferring, _initializing) {
+			var show = "";
+			var hide = "display: none;";
+			var style = (isLoading && _indications.loading) ?
+				show : (_measuring && _indications.measuring) ?
+				show : (_deferring && _indications.deferring) ?
+				show : (_initializing && _indications.initializing) ?
+				show : hide;
+
+			return style;
+		},
+
+		_stylizeWidth: function (_vScrollbarWidth) {
+			this._delayedColumnResizing();
+			return "width: "+_vScrollbarWidth+"px; ";
 		},
 
 		requestInitialization: function () {

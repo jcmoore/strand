@@ -31,12 +31,17 @@
 				<div id="middle"></div>
 			</div>
 			<div id="header">
-				<content select=":not([recycler=footer])"></content>
+				<content select="[recycler=header]"></content>
 			</div>
 			<div id="footer">
 				<content select="[recycler=footer]"></content>
 			</div>
 			<div id="extent" style$="{{_extentStyle(_middleWidth, _headerWidth, _footerWidth)}}"></div>
+			<div id="overlay">
+				<div id="fixes-flicker">
+					<content select="[recycler=overlay]"></content>
+				</div>
+			</div>
 		</div>
 	</template>
 </dom-module>

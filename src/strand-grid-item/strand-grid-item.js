@@ -70,7 +70,23 @@
 		},
 
 		_computeColumnStyle: function(value) {
+			this.debounce("adjust-width", this._calculateItemWidth, 0);
 			return 'width: ' + value;
+		},
+
+		_calculateItemWidth: function () {
+			var columns = Polymer.dom(this.$.columnContainer).children;
+			var count = columns.length;
+			var index = 0;
+			var width = 0;
+			width += this.$.mark.clientWidth;
+			width += this.$.carat.clientWidth;
+
+			for (index; index < count; index++) {
+				width += columns[index].clientWidth;
+			}
+
+			this.$.bounds.style.width = width + "px";
 		},
 
 		_onItemSelected: function(e, detail, sender) {

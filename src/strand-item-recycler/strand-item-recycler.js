@@ -238,6 +238,18 @@ found here: https://github.com/Polymer/core-list
 				type: Number,
 				value: 0,
 			},
+			sliderTop: {
+				type: Number,
+				value: 0,
+				notify: true,
+				readOnly: true,
+			},
+			sliderLeft: {
+				type: Number,
+				value: 0,
+				notify: true,
+				readOnly: true,
+			},
 			_maxPixels: {
 				type: Number,
 				value: 1 << 24,
@@ -275,6 +287,10 @@ found here: https://github.com/Polymer/core-list
 				value: false,
 				notify: true,
 				readOnly: true,
+				reflectToAttribute: true,
+			},
+			modifying: {
+				type: Boolean,
 				reflectToAttribute: true,
 			},
 			data: {
@@ -853,6 +869,8 @@ found here: https://github.com/Polymer/core-list
 			} else {
 				this.scrollBy(delta);
 			}
+
+			this._setSliderTop(this._scrollTop);
 		},
 
 		_vscrollHandler: function(e) {
@@ -877,6 +895,8 @@ found here: https://github.com/Polymer/core-list
 			// TODO: centralize style changes and make sure 3d still works properly
 			this.$.middle.style.left = (-scrollLeft)+"px";
 			vscrollable.style.left = scrollLeft+"px";
+
+			this._setSliderLeft(scrollLeft);
 		},
 
 		inferOffviewHeightsAfterNextMutation: function () {

@@ -27,9 +27,13 @@
 #header, #footer {
 	/*position: fixed;*/
 	display: flex;
+	align-items: stretch;
 	min-width: 100%;
-	background: $color-A16;
 	user-select: none;
+
+	#mark, #carat, #spacer, #columnContainer {
+		background: $color-A16;
+	}
 }
 
 #header {
@@ -73,17 +77,31 @@
 }
 
 #loader {
-	top: 50%;
-	left: 50%;
-	right: 50%;
 	width: 130px;
 	height: 28px;
-	margin-top: -14px;
-	margin-left: -75px;
+	margin: auto;
+	position: relative;
 }
 
 #columnContainer {
+	flex-grow: 1;
+	flex-shrink: 1;
 	display: flex;
-	flex: 1;
-	width: 100%;
+	:not([hidden]) {
+		flex-grow: 1;
+		flex-shrink: 1;
+	}
+}
+
+#mark, #carat {
+	flex-grow: 0;
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	margin: 0;
+}
+
+#spacer {
+	flex-grow: 0;
+	flex-shrink: 0;
 }

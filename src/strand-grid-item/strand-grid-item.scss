@@ -12,10 +12,14 @@
 :host {
 	display: block;
 	position: relative;
-	overflow: hidden;
 	background: #fff;
 	@include defaultFont(12px, normal);
-	border-bottom: 1px solid $color-A9;
+
+	#bounds {
+		overflow: hidden;
+		border-bottom: 1px solid $color-A9;
+		min-width: 100%;
+	}
 }
 
 polyfill-next-selector { content: ':host ._mm_item'; }
@@ -23,7 +27,19 @@ polyfill-next-selector { content: ':host ._mm_item'; }
 	padding: 10px 0;
 }
 
+#item {
+	display: flex;
+}
+
+#carat, #mark {
+	flex-grow: 0;
+	flex-shrink: 0;
+	margin: 0;
+}
+
 #columnContainer {
+	flex-grow: 1;
+	flex-shrink: 0;
 	overflow: hidden;
 	white-space: nowrap;
 }

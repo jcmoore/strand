@@ -148,7 +148,10 @@
 
 		_timeChanged: function(newTime, oldTime) {
 			if(newTime && newTime !== oldTime) {
-				this.value = moment(this.value).startOf("day").seconds(newTime || 0).format();
+				var wrappedNew = moment(this.value);
+				if (wrappedNew.isValid()) {
+					this.value = wrappedNew.startOf("day").seconds(newTime || 0).format();
+				}
 			}
 		},
 
